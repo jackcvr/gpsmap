@@ -55,13 +55,13 @@ func StartHTTPServer(addr string) {
 		end := start.Add(time.Hour * 24)
 
 		if from != "" && to != "" {
-			start, err = time.Parse("2006-1-02", from)
+			start, err = time.Parse("2006-1-2", from)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			start = toDayLocal(start)
-			end, err = time.Parse("2006-1-02", to)
+			end, err = time.Parse("2006-1-2", to)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return

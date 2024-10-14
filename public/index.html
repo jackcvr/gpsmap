@@ -61,6 +61,31 @@
         </tr>
     </table>
     <script type="module">
+        const params = {
+            239: ["Ignition", {0: "Off", 1: "On"}],
+            240: ["Movement", {0: "Off", 1: "On"}],
+            21: ["GSM Signal"],
+            200: ["Sleep Mode", {
+                0: "No Sleep",
+                1: "GPS Sleep",
+                2: "Deep Sleep",
+                3: "Online Sleep",
+                4: "Ultra Sleep",
+            }],
+            69: ["GNSS Status", {
+                0: "GNSS OFF",
+                1: "GNSS ON with fix",
+                2: "GNSS ON without fix",
+                3: "GNSS sleep",
+            }],
+            181: ["GNSS PDOP"],
+            182: ["GNSS HDOP"],
+            66: ["External Voltage"],
+            67: ["Battery Voltage"],
+            68: ["Battery Current"],
+            241: ["Active GSM Operator"],
+            16: ["Total Odometer"],
+        }
         const map = L.map("map")
         const records = []
         const markers = []
@@ -90,9 +115,15 @@
                 item.created_at = new Date(item.created_at).toLocaleString()
                 item.payload = JSON.parse(item.payload)
                 const data = item.payload.state.reported
+                for (const [key, value] of Object.entries(data)) {
+                    if (key in params) {
+                        data[params[key][0]] = params[key][1] ? params[key][1][value] : value
+                        delete data[key]
+                    }
+                }
                 const coords = data.latlng.split(",")
                 const marker = L.marker(coords, {opacity: 0.1})
-                marker.addTo(map).bindPopup(`<pre>${item.created_at}\n\n${data.latlng}</pre>`)
+                marker.addTo(map).bindPopup(`<pre>${item.created_at}\n\n${JSON.stringify(data, null, 2)}</pre>`)
                 marker._imei = item.imei
                 marker._recordId = item.id.toString()
                 markers.push(marker)
@@ -208,6 +239,7 @@
                     if (selected.includes(marker._recordId)) {
                         marker.setOpacity(1.0)
                         map.setView(marker.getLatLng())
+                        marker.openPopup()
                     }
                 } else {
                     marker.setOpacity(0.1)
