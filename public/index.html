@@ -61,7 +61,7 @@
         </tr>
     </table>
     <script type="module">
-        const params = {
+        const paramsInfo = {
             239: ["Ignition", {0: "Off", 1: "On"}],
             240: ["Movement", {0: "Off", 1: "On"}],
             21: ["GSM Signal"],
@@ -95,6 +95,18 @@
         const $imei = $("#imei")
         const $records = $("#records")
 
+        const prettifyParams = (params) => {
+            const pdata = { ...params }
+            for (const [key, value] of Object.entries(pdata)) {
+                if (key in paramsInfo) {
+                    pdata[paramsInfo[key][0]] = paramsInfo[key][1] ? paramsInfo[key][1][value] : value
+                    delete pdata[key]
+                }
+            }
+            pdata.latlng = `<a target='_blank' href='https://www.google.com/maps/place/${pdata.latlng}'>${pdata.latlng}</a>`
+            return pdata
+        }
+
         const updateRecords = async (from, to) => {
             $imei.empty()
             markers.forEach(marker => {
@@ -114,16 +126,10 @@
                 }
                 item.created_at = new Date(item.created_at).toLocaleString()
                 item.payload = JSON.parse(item.payload)
-                const data = item.payload.state.reported
-                for (const [key, value] of Object.entries(data)) {
-                    if (key in params) {
-                        data[params[key][0]] = params[key][1] ? params[key][1][value] : value
-                        delete data[key]
-                    }
-                }
-                const coords = data.latlng.split(",")
+                const coords = item.payload.state.reported.latlng.split(",")
                 const marker = L.marker(coords, {opacity: 0.1})
-                marker.addTo(map).bindPopup(`<pre>${item.created_at}\n\n${JSON.stringify(data, null, 2)}</pre>`)
+                const jsonParams = JSON.stringify(prettifyParams(item.payload.state.reported), null, 2)
+                marker.addTo(map).bindPopup(`<pre>${item.created_at}\n${jsonParams}</pre>`)
                 marker._imei = item.imei
                 marker._recordId = item.id.toString()
                 markers.push(marker)

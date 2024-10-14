@@ -42,10 +42,18 @@ func toDayLocal(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 }
 
+func logRequest(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		h.ServeHTTP(w, r)
+		log.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.RequestURI, time.Since(start))
+	})
+}
+
 func StartHTTPServer(addr string) {
 	basicAuth := httpauth.SimpleBasicAuth(Username, Password)
 
-	http.Handle("GET /records", basicAuth(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /records", logRequest(basicAuth(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		from := req.FormValue("from")
 		to := req.FormValue("to")
 
@@ -80,9 +88,9 @@ func StartHTTPServer(addr string) {
 			errLog.Print(err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
-	})))
+	}))))
 
-	http.Handle("GET /", basicAuth(http.FileServer(http.Dir(AbsPublicDir))))
+	http.Handle("GET /", logRequest(basicAuth(http.FileServer(http.Dir(AbsPublicDir)))))
 
 	log.Printf("listening on %s", addr)
 	log.Fatal(http.ListenAndServeTLS(addr, CertFile, KeyFile, nil))

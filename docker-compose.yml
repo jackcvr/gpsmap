@@ -9,5 +9,5 @@ services:
       - ./public:/app/public
       - ./.data:/app/.data
     network_mode: host
-    command: ["/app/gpstrack", "12000", "12050"]
+    command: ["/app/gpstrack", "-http", "0.0.0.0:12000", "-gprs", "0.0.0.0:12050"]
     env_file: .env
