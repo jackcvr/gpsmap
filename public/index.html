@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>GPS tracking map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        table {
+            width: 100%;
+        }
+        table td {
+            vertical-align: top;
+        }
+        #map {
+            width: 80%;
+            height: 90vh;
+        }
+        #records {
+            width: 100%;
+            height: 70vh;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js" integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js" defer></script>
+</head>
+<body>
+    <table>
+        <tr>
+            <td>
+                <fieldset>
+                    <legend>Date</legend>
+                    <div>
+                        <label for="from">Day</label>
+                        <input name="day" type="date" id="day" />
+                    </div>
+                    <hr />
+                    <div>
+                        <label for="from">From</label>
+                        <input name="from" type="date" id="from" />
+                        <label for="to">To</label>
+                        <input name="to" type="date" id="to" />
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>IMEI</legend>
+                    <select id="imei" multiple></select>
+                </fieldset>
+                <fieldset>
+                    <legend>Speed (ms)</legend>
+                    <input type="number" id="speed" value="50" />
+                    <button id="play">Play</button>
+                    <button id="cancelPlay">Cancel</button>
+                </fieldset>
+                <fieldset>
+                    <legend>Records</legend>
+                    <select id="records" multiple></select>
+                </fieldset>
+            </td>
+            <td id="map"></td>
+        </tr>
+    </table>
+    <script type="module">
+        const map = L.map("map")
+        const records = []
+        const markers = []
+        const $day = $("#day")
+        const $from = $("#from")
+        const $to = $("#to")
+        const $imei = $("#imei")
+        const $records = $("#records")
+
+        const updateRecords = async (from, to) => {
+            $imei.empty()
+            markers.forEach(marker => {
+                marker.removeFrom(map)
+            })
+            markers.splice(0, markers.length)
+
+            from = `${from.getFullYear()}-${from.getMonth()+1}-${from.getDate()}`
+            to = `${to.getFullYear()}-${to.getMonth()+1}-${to.getDate()}`
+            const res = await fetch(`/records?from=${from}&to=${to}`)
+            const items = await res.json()
+
+            let centered = false
+            items.forEach(item => {
+                if ($imei.find(`option[value="${item.imei}"]`).length === 0) {
+                    $imei.append(`<option value="${item.imei}">${item.imei}</option>`)
+                }
+                item.created_at = new Date(item.created_at).toLocaleString()
+                item.payload = JSON.parse(item.payload)
+                const data = item.payload.state.reported
+                const coords = data.latlng.split(",")
+                const marker = L.marker(coords, {opacity: 0.1})
+                marker.addTo(map).bindPopup(`<pre>${item.created_at}\n\n${data.latlng}</pre>`)
+                marker._imei = item.imei
+                marker._recordId = item.id.toString()
+                markers.push(marker)
+                if (!centered) {
+                    map.setView(coords, 13)
+                    centered = true
+                }
+            })
+            records.splice(0, records.length, ...items)
+
+            $records.empty()
+            records.forEach(record => {
+                const data = record.payload.state.reported
+                $records.append(`<option value="${record.id}">${record.created_at} > ${data.latlng}</option>`)
+            })
+        }
+
+        const [ playAnimation, cancelAnimation ] = (() => {
+            const timers = []
+            let isCanceled = false
+
+            const cancel = () => {
+                isCanceled = true
+                timers.forEach(t => {
+                    clearTimeout(t)
+                })
+                timers.splice(0, timers.length)
+                isCanceled = false
+            }
+
+            const play = () => {
+                cancel()
+                const speed = parseInt($("#speed").val())
+                markers.forEach((marker, i, markers) => {
+                    ((i) => {
+                        if (isCanceled) {
+                            return
+                        }
+                        marker.setOpacity(0.1)
+                        timers.push(setTimeout(() => {
+                            if (isCanceled) {
+                                return
+                            }
+                            marker.setOpacity(1.0)
+                            markers[i-1] && markers[i-1].setOpacity(0.75)
+                            markers[i-2] && markers[i-2].setOpacity(0.5)
+                            markers[i-3] && markers[i-3].setOpacity(0.25)
+                            markers[i-4] && markers[i-4].setOpacity(0.1)
+                            map.setView(marker.getLatLng())
+                            $records.val(marker._recordId)
+                            setTimeout(() => {
+                                $records.scrollTop(i * 17)
+                            }, 0)
+                            if (marker === markers[-1]) {
+                                timers.splice(0, timers.length)
+                            }
+                        }, 500 + i * speed))
+                    })(i)
+                })
+            }
+
+            return [ play, cancel ]
+        })()
+
+        $day.on("change", async e => {
+            const from = new Date($day.val())
+            from.setHours(0, 0, 0, 0)
+            const to = new Date(from)
+            to.setDate(to.getDate() + 1)
+            await updateRecords(from, to)
+        })
+
+        $from.add($to).on("change", async e => {
+            const fromVal = $from.val()
+            const toVal = $to.val()
+            if (!fromVal || !toVal) {
+                return
+            }
+            const from = new Date(fromVal)
+            from.setHours(0, 0, 0, 0)
+            const to = new Date(toVal)
+            to.setHours(0, 0, 0, 0)
+            await updateRecords(from, to)
+        })
+
+        $imei.on("change", async e => {
+            const selected = $imei.val()
+            markers.forEach(marker => {
+                if (selected.length > 0) {
+                    marker.setOpacity(0)
+                    if (selected.includes(marker._imei)) {
+                        marker.setOpacity(0.1)
+                    }
+                } else {
+                    marker.setOpacity(0.1)
+                }
+            })
+        })
+
+        $("#play").click(e => {
+            playAnimation()
+        })
+
+        $("#cancelPlay").click(e => {
+            cancelAnimation()
+        })
+
+        $records.on("change", () => {
+            const selected = $records.val()
+            markers.forEach(marker => {
+                if (selected.length > 0) {
+                    marker.setOpacity(0)
+                    if (selected.includes(marker._recordId)) {
+                        marker.setOpacity(1.0)
+                        map.setView(marker.getLatLng())
+                    }
+                } else {
+                    marker.setOpacity(0.1)
+                }
+            })
+        })
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            minZoom: 3,
+            maxZoom: 19,
+        }).addTo(map)
+
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const tomorrow = new Date(today)
+        tomorrow.setDate(today.getDate() + 1)
+        await updateRecords(today, tomorrow)
+    </script>
+</body>
+</html>
