@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/jackcvr/gpstrack/orm"
 	_ "github.com/joho/godotenv/autoload"
 	"gorm.io/gorm/logger"
@@ -12,6 +11,7 @@ import (
 )
 
 const (
+	TZ         = "Europe/Vilnius"
 	LogFlags   = log.LstdFlags | log.Lshortfile | log.Lmicroseconds
 	BufferSize = 1024
 )
@@ -24,7 +24,7 @@ var (
 )
 
 func init() {
-	loc, err := time.LoadLocation(orm.TZ)
+	loc, err := time.LoadLocation(TZ)
 	if err != nil {
 		panic(err)
 	}
@@ -36,6 +36,6 @@ func init() {
 }
 
 func main() {
-	go StartHTTPServer(fmt.Sprintf("0.0.0.0:%s", HTTPPort))
-	StartTCPServer(fmt.Sprintf("0.0.0.0:%s", GPRSPort))
+	go StartHTTPServer("0.0.0.0:" + HTTPPort)
+	StartTCPServer("0.0.0.0:" + GPRSPort)
 }

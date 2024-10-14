@@ -1,13 +1,13 @@
 services:
   app:
-    image: alpine:latest
+    build: .
     restart: always
     init: true
     working_dir: /app
     volumes:
       - ./dist/gpstrack_linux_amd64_v1:/app
       - ./public:/app/public
-      - ./cert:/app/cert
+      - ./.data:/app/.data
     network_mode: host
     command: ["/app/gpstrack", "12000", "12050"]
     env_file: .env
