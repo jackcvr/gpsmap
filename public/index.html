@@ -86,15 +86,6 @@
             241: ["Active GSM Operator"],
             16: ["Total Odometer"],
         }
-        const map = L.map("map")
-        const records = []
-        const markers = []
-        const $day = $("#day")
-        const $from = $("#from")
-        const $to = $("#to")
-        const $imei = $("#imei")
-        const $records = $("#records")
-
         const prettifyParams = (params) => {
             const pdata = { ...params }
             for (const [key, value] of Object.entries(pdata)) {
@@ -106,6 +97,14 @@
             pdata.latlng = `<a target='_blank' href='https://www.google.com/maps/place/${pdata.latlng}'>${pdata.latlng}</a>`
             return pdata
         }
+        const map = L.map("map")
+        const records = []
+        const markers = []
+        const $day = $("#day")
+        const $from = $("#from")
+        const $to = $("#to")
+        const $imei = $("#imei")
+        const $records = $("#records")
 
         const updateRecords = async (from, to) => {
             $imei.empty()

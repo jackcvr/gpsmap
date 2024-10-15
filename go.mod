@@ -1,4 +1,4 @@
-module github.com/jackcvr/gpstrack
+module github.com/jackcvr/gpsmap
 
 go 1.23.0
 

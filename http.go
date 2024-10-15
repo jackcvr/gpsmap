@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/goji/httpauth"
-	"github.com/jackcvr/gpstrack/orm"
+	"github.com/jackcvr/gpsmap/orm"
 	_ "github.com/joho/godotenv/autoload"
 	"log"
 	"net/http"
@@ -52,8 +52,11 @@ func logRequest(h http.Handler) http.Handler {
 
 func StartHTTPServer(addr string) {
 	basicAuth := httpauth.SimpleBasicAuth(Username, Password)
+	mw := func(h http.Handler) http.Handler {
+		return logRequest(basicAuth(h))
+	}
 
-	http.Handle("GET /records", logRequest(basicAuth(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /records", mw(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		from := req.FormValue("from")
 		to := req.FormValue("to")
 
@@ -86,11 +89,10 @@ func StartHTTPServer(addr string) {
 		_, err = w.Write(asJSON(recs))
 		if err != nil {
 			errLog.Print(err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
-	}))))
+	})))
 
-	http.Handle("GET /", logRequest(basicAuth(http.FileServer(http.Dir(AbsPublicDir)))))
+	http.Handle("GET /", mw(http.FileServer(http.Dir(AbsPublicDir))))
 
 	log.Printf("listening on %s", addr)
 	log.Fatal(http.ListenAndServeTLS(addr, CertFile, KeyFile, nil))

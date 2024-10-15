@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/jackcvr/gpstrack/orm"
+	"github.com/jackcvr/gpsmap/orm"
 	_ "github.com/joho/godotenv/autoload"
 	"gorm.io/gorm/logger"
 	"log"
@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	TZ         = "Europe/Vilnius"
 	LogFlags   = log.LstdFlags | log.Lshortfile | log.Lmicroseconds
 	BufferSize = 1024
 )
@@ -20,11 +19,15 @@ const (
 var (
 	HTTPAddr string
 	GPRSAddr string
+	TZ       = os.Getenv("TZ")
 	Debug    = os.Getenv("DEBUG")
 	errLog   = log.New(os.Stderr, "ERROR: ", LogFlags)
 )
 
 func init() {
+	if TZ == "" {
+		TZ = "Europe/Vilnius"
+	}
 	loc, err := time.LoadLocation(TZ)
 	if err != nil {
 		panic(err)

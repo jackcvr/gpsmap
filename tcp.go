@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/binary"
-	"github.com/jackcvr/gpstrack/orm"
+	"github.com/jackcvr/gpsmap/orm"
 	"io"
 	"log"
 	"net"
