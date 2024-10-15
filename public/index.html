@@ -106,18 +106,14 @@
         const $imei = $("#imei")
         const $records = $("#records")
         const MinOpacity = 0.1
-
-        const getURLParams = () => {
-            return new URLSearchParams(window.location.hash.slice(1))
-        }
+        const URLParams = new URLSearchParams(window.location.hash.slice(1))
 
         const makeDate = (s) => {
             const d = s ? new Date(s) : new Date()
             d.setHours(0, 0, 0, 0)
             return d
         }
-
-        const date2Str = (d) => {
+        const date2str = (d) => {
             const day = d.getDate().toString().padStart(2, "0")
             const month = (d.getMonth() + 1).toString().padStart(2, "0")
             const year = d.getFullYear()
@@ -131,7 +127,7 @@
             })
             markers.splice(0, markers.length)
 
-            const res = await fetch(`/records?from=${date2Str(from)}&to=${date2Str(to)}`)
+            const res = await fetch(`/records?from=${date2str(from)}&to=${date2str(to)}`)
             const _records = await res.json()
 
             let centered = false
@@ -150,10 +146,15 @@
                 marker.on("popupopen", () => {
                     marker.setOpacity(1)
                     $records.val(marker._recordId)
+                    URLParams.delete("record")
+                    URLParams.append("record", marker._recordId)
+                    window.location.hash = URLParams.toString()
                 })
                 marker.on("popupclose", () => {
                     marker.setOpacity(MinOpacity)
                     $records.val(null)
+                    URLParams.delete("record")
+                    window.location.hash = URLParams.toString()
                 })
                 markers.push(marker)
                 if (!centered) {
@@ -165,9 +166,14 @@
 
             $records.empty()
             records.forEach(record => {
-                const data = record.payload.state.reported
-                $records.append(`<option value="${record.id}">${record.created_at} > ${data.latlng}</option>`)
+                const items = record.payload.state.reported
+                $records.append(`<option value="${record.id}">${record.created_at} > ${items.latlng}</option>`)
             })
+
+            const recordId = URLParams.get("record")
+            if (recordId) {
+                $records.val(recordId).change()
+            }
         }
 
         const [ playAnimation, cancelAnimation ] = (() => {
@@ -222,7 +228,7 @@
             $from.val(fromVal)
             const to = new Date(fromVal)
             to.setDate(to.getDate() + 1)
-            $to.val(date2Str(to)).change()
+            $to.val(date2str(to)).change()
         })
 
         $from.add($to).on("change", async e => {
@@ -232,12 +238,11 @@
                 return
             }
             await updateRecords(makeDate(from), makeDate(to))
-            const params = getURLParams()
-            params.delete("from")
-            params.delete("to")
-            params.append("from", from)
-            params.append("to", to)
-            window.location.hash = params.toString()
+            URLParams.delete("from")
+            URLParams.append("from", from)
+            URLParams.delete("to")
+            URLParams.append("to", to)
+            window.location.hash = URLParams.toString()
         })
 
         $imei.on("change", async e => {
@@ -283,15 +288,14 @@
         }).addTo(map)
 
         if (window.location.hash.length > 1)  {
-            const params = getURLParams()
-            $from.val(params.get("from"))
-            $to.val(params.get("to")).change()
+            $from.val(URLParams.get("from"))
+            $to.val(URLParams.get("to")).change()
         } else {
             const today = makeDate()
             const tomorrow = makeDate()
             tomorrow.setDate(tomorrow.getDate() + 1)
-            $from.val(date2Str(today))
-            $to.val(date2Str(tomorrow)).change()
+            $from.val(date2str(today))
+            $to.val(date2str(tomorrow)).change()
         }
     </script>
 </body>
