@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const PublicDir = "./public"
+const (
+	PublicDir  = "./public"
+	DateFormat = "2006-01-02"
+)
 
 var (
 	AbsPublicDir string
@@ -52,11 +55,11 @@ func logRequest(h http.Handler) http.Handler {
 
 func StartHTTPServer(addr string) {
 	basicAuth := httpauth.SimpleBasicAuth(Username, Password)
-	mw := func(h http.Handler) http.Handler {
+	Handler := func(h http.Handler) http.Handler {
 		return logRequest(basicAuth(h))
 	}
 
-	http.Handle("GET /records", mw(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /records", Handler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		from := req.FormValue("from")
 		to := req.FormValue("to")
 
@@ -66,18 +69,17 @@ func StartHTTPServer(addr string) {
 		end := start.Add(time.Hour * 24)
 
 		if from != "" && to != "" {
-			start, err = time.Parse("2006-1-2", from)
+			if start, err = time.Parse(DateFormat, from); err == nil {
+				start = toDayLocal(start)
+				if end, err = time.Parse(DateFormat, to); err == nil {
+					end = toDayLocal(end)
+				}
+			}
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				errLog.Print(err)
+				http.Error(w, "Bad request", http.StatusBadRequest)
 				return
 			}
-			start = toDayLocal(start)
-			end, err = time.Parse("2006-1-2", to)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			end = toDayLocal(end)
 		}
 
 		var recs []orm.Record
@@ -92,7 +94,7 @@ func StartHTTPServer(addr string) {
 		}
 	})))
 
-	http.Handle("GET /", mw(http.FileServer(http.Dir(AbsPublicDir))))
+	http.Handle("GET /", Handler(http.FileServer(http.Dir(AbsPublicDir))))
 
 	log.Printf("listening on %s", addr)
 	log.Fatal(http.ListenAndServeTLS(addr, CertFile, KeyFile, nil))

@@ -61,7 +61,7 @@
         </tr>
     </table>
     <script type="module">
-        const paramsInfo = {
+        const itemsInfo = {
             239: ["Ignition", {0: "Off", 1: "On"}],
             240: ["Movement", {0: "Off", 1: "On"}],
             21: ["GSM Signal"],
@@ -86,16 +86,16 @@
             241: ["Active GSM Operator"],
             16: ["Total Odometer"],
         }
-        const prettifyParams = (params) => {
-            const pdata = { ...params }
-            for (const [key, value] of Object.entries(pdata)) {
-                if (key in paramsInfo) {
-                    pdata[paramsInfo[key][0]] = paramsInfo[key][1] ? paramsInfo[key][1][value] : value
-                    delete pdata[key]
+        const prettifyItems = (items) => {
+            const pitems = { ...items }
+            for (const [key, value] of Object.entries(pitems)) {
+                if (key in itemsInfo) {
+                    pitems[itemsInfo[key][0]] = itemsInfo[key][1] ? itemsInfo[key][1][value] : value
+                    delete pitems[key]
                 }
             }
-            pdata.latlng = `<a target='_blank' href='https://www.google.com/maps/place/${pdata.latlng}'>${pdata.latlng}</a>`
-            return pdata
+            pitems.latlng = `<a target='_blank' href='https://www.google.com/maps/place/${pitems.latlng}'>${pitems.latlng}</a>`
+            return pitems
         }
         const map = L.map("map")
         const records = []
@@ -105,6 +105,24 @@
         const $to = $("#to")
         const $imei = $("#imei")
         const $records = $("#records")
+        const MinOpacity = 0.1
+
+        const getURLParams = () => {
+            return new URLSearchParams(window.location.hash.slice(1))
+        }
+
+        const makeDate = (s) => {
+            const d = s ? new Date(s) : new Date()
+            d.setHours(0, 0, 0, 0)
+            return d
+        }
+
+        const date2Str = (d) => {
+            const day = d.getDate().toString().padStart(2, "0")
+            const month = (d.getMonth() + 1).toString().padStart(2, "0")
+            const year = d.getFullYear()
+            return `${year}-${month}-${day}`
+        }
 
         const updateRecords = async (from, to) => {
             $imei.empty()
@@ -113,31 +131,37 @@
             })
             markers.splice(0, markers.length)
 
-            from = `${from.getFullYear()}-${from.getMonth()+1}-${from.getDate()}`
-            to = `${to.getFullYear()}-${to.getMonth()+1}-${to.getDate()}`
-            const res = await fetch(`/records?from=${from}&to=${to}`)
-            const items = await res.json()
+            const res = await fetch(`/records?from=${date2Str(from)}&to=${date2Str(to)}`)
+            const _records = await res.json()
 
             let centered = false
-            items.forEach(item => {
-                if ($imei.find(`option[value="${item.imei}"]`).length === 0) {
-                    $imei.append(`<option value="${item.imei}">${item.imei}</option>`)
+            _records.forEach(record => {
+                if ($imei.find(`option[value="${record.imei}"]`).length === 0) {
+                    $imei.append(`<option value="${record.imei}">${record.imei}</option>`)
                 }
-                item.created_at = new Date(item.created_at).toLocaleString()
-                item.payload = JSON.parse(item.payload)
-                const coords = item.payload.state.reported.latlng.split(",")
-                const marker = L.marker(coords, {opacity: 0.1})
-                const jsonParams = JSON.stringify(prettifyParams(item.payload.state.reported), null, 2)
-                marker.addTo(map).bindPopup(`<pre>${item.created_at}\n${jsonParams}</pre>`)
-                marker._imei = item.imei
-                marker._recordId = item.id.toString()
+                record.created_at = new Date(record.created_at).toLocaleString()
+                record.payload = JSON.parse(record.payload)
+                const coords = record.payload.state.reported.latlng.split(",")
+                const marker = L.marker(coords, {opacity: MinOpacity})
+                const jsonItems = JSON.stringify(prettifyItems(record.payload.state.reported), null, 2)
+                marker.addTo(map).bindPopup(`<pre>${record.created_at}\n${jsonItems}</pre>`)
+                marker._imei = record.imei
+                marker._recordId = record.id.toString()
+                marker.on("popupopen", () => {
+                    marker.setOpacity(1)
+                    $records.val(marker._recordId)
+                })
+                marker.on("popupclose", () => {
+                    marker.setOpacity(MinOpacity)
+                    $records.val(null)
+                })
                 markers.push(marker)
                 if (!centered) {
                     map.setView(coords, 13)
                     centered = true
                 }
             })
-            records.splice(0, records.length, ...items)
+            records.splice(0, records.length, ..._records)
 
             $records.empty()
             records.forEach(record => {
@@ -167,7 +191,7 @@
                         if (isCanceled) {
                             return
                         }
-                        marker.setOpacity(0.1)
+                        marker.setOpacity(MinOpacity)
                         timers.push(setTimeout(() => {
                             if (isCanceled) {
                                 return
@@ -176,7 +200,7 @@
                             markers[i-1] && markers[i-1].setOpacity(0.75)
                             markers[i-2] && markers[i-2].setOpacity(0.5)
                             markers[i-3] && markers[i-3].setOpacity(0.25)
-                            markers[i-4] && markers[i-4].setOpacity(0.1)
+                            markers[i-4] && markers[i-4].setOpacity(MinOpacity)
                             map.setView(marker.getLatLng())
                             $records.val(marker._recordId)
                             setTimeout(() => {
@@ -194,24 +218,26 @@
         })()
 
         $day.on("change", async e => {
-            const from = new Date($day.val())
-            from.setHours(0, 0, 0, 0)
-            const to = new Date(from)
+            const fromVal = $day.val()
+            $from.val(fromVal)
+            const to = new Date(fromVal)
             to.setDate(to.getDate() + 1)
-            await updateRecords(from, to)
+            $to.val(date2Str(to)).change()
         })
 
         $from.add($to).on("change", async e => {
-            const fromVal = $from.val()
-            const toVal = $to.val()
-            if (!fromVal || !toVal) {
+            const from = $from.val()
+            const to = $to.val()
+            if (!from || !to) {
                 return
             }
-            const from = new Date(fromVal)
-            from.setHours(0, 0, 0, 0)
-            const to = new Date(toVal)
-            to.setHours(0, 0, 0, 0)
-            await updateRecords(from, to)
+            await updateRecords(makeDate(from), makeDate(to))
+            const params = getURLParams()
+            params.delete("from")
+            params.delete("to")
+            params.append("from", from)
+            params.append("to", to)
+            window.location.hash = params.toString()
         })
 
         $imei.on("change", async e => {
@@ -220,10 +246,10 @@
                 if (selected.length > 0) {
                     marker.setOpacity(0)
                     if (selected.includes(marker._imei)) {
-                        marker.setOpacity(0.1)
+                        marker.setOpacity(MinOpacity)
                     }
                 } else {
-                    marker.setOpacity(0.1)
+                    marker.setOpacity(MinOpacity)
                 }
             })
         })
@@ -238,30 +264,35 @@
 
         $records.on("change", () => {
             const selected = $records.val()
-            markers.forEach(marker => {
-                if (selected.length > 0) {
-                    marker.setOpacity(0)
-                    if (selected.includes(marker._recordId)) {
-                        marker.setOpacity(1.0)
-                        map.setView(marker.getLatLng())
-                        marker.openPopup()
-                    }
-                } else {
-                    marker.setOpacity(0.1)
+            if (selected.length === 0) {
+                return
+            }
+            for (let i = 0; i < markers.length; i++) {
+                const m = markers[i]
+                if (m._recordId === selected[selected.length-1]) {
+                    map.setView(m.getLatLng())
+                    m.openPopup()
+                    break
                 }
-            })
+            }
         })
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             minZoom: 3,
             maxZoom: 19,
         }).addTo(map)
 
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const tomorrow = new Date(today)
-        tomorrow.setDate(today.getDate() + 1)
-        await updateRecords(today, tomorrow)
+        if (window.location.hash.length > 1)  {
+            const params = getURLParams()
+            $from.val(params.get("from"))
+            $to.val(params.get("to")).change()
+        } else {
+            const today = makeDate()
+            const tomorrow = makeDate()
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            $from.val(date2Str(today))
+            $to.val(date2Str(tomorrow)).change()
+        }
     </script>
 </body>
 </html>

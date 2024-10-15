@@ -51,7 +51,7 @@ func StartTCPServer(addr string) {
 					return
 				} else {
 					payload := string(buf[:n])
-					log.Print(payload)
+					log.Printf("received: %s", payload)
 					r := orm.Record{
 						Imei:    imei,
 						Payload: payload,
