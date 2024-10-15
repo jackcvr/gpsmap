@@ -61,7 +61,7 @@
         </tr>
     </table>
     <script type="module">
-        const itemsInfo = {
+        const dataInfo = {
             239: ["Ignition", {0: "Off", 1: "On"}],
             240: ["Movement", {0: "Off", 1: "On"}],
             21: ["GSM Signal"],
@@ -85,17 +85,22 @@
             68: ["Battery Current"],
             241: ["Active GSM Operator"],
             16: ["Total Odometer"],
+            175: ["Auto Geofence", {0: "target left zone", 1: "target entered zone"}],
+            252: ["Unplug", {0: "battery present", 1: "battery unplugged"}],
         }
-        const prettifyItems = (items) => {
-            const pitems = { ...items }
-            for (const [key, value] of Object.entries(pitems)) {
-                if (key in itemsInfo) {
-                    pitems[itemsInfo[key][0]] = itemsInfo[key][1] ? itemsInfo[key][1][value] : value
-                    delete pitems[key]
+        const prettifyData = (data) => {
+            const pdata = { ...data }
+            for (const [key, value] of Object.entries(pdata)) {
+                if (key === "evt" && value in dataInfo) {
+                    pdata[key] = dataInfo[value][0]
+                    delete pdata[key]
+                } else if (key in dataInfo) {
+                    pdata[dataInfo[key][0]] = dataInfo[key][1] ? dataInfo[key][1][value] : value
+                    delete pdata[key]
                 }
             }
-            pitems.latlng = `<a target='_blank' href='https://www.google.com/maps/place/${pitems.latlng}'>${pitems.latlng}</a>`
-            return pitems
+            pdata.latlng = `<a target='_blank' href='https://www.google.com/maps/place/${pdata.latlng}'>${pdata.latlng}</a>`
+            return pdata
         }
         const map = L.map("map")
         const records = []
@@ -139,7 +144,7 @@
                 record.payload = JSON.parse(record.payload)
                 const coords = record.payload.state.reported.latlng.split(",")
                 const marker = L.marker(coords, {opacity: MinOpacity})
-                const jsonItems = JSON.stringify(prettifyItems(record.payload.state.reported), null, 2)
+                const jsonItems = JSON.stringify(prettifyData(record.payload.state.reported), null, 2)
                 marker.addTo(map).bindPopup(`<pre>${record.created_at}\n${jsonItems}</pre>`)
                 marker._imei = record.imei
                 marker._recordId = record.id.toString()
@@ -166,8 +171,9 @@
 
             $records.empty()
             records.forEach(record => {
-                const items = record.payload.state.reported
-                $records.append(`<option value="${record.id}">${record.created_at} > ${items.latlng}</option>`)
+                const data = record.payload.state.reported
+                const event = data.evt > 0 && data.evt in dataInfo ? ` ${dataInfo[data.evt][0]} ` : ""
+                $records.append(`<option value="${record.id}">${record.created_at} >${event}> ${data.latlng}</option>`)
             })
 
             const recordId = URLParams.get("record")
