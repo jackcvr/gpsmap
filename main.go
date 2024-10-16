@@ -76,6 +76,6 @@ func main() {
 	}
 
 	db := orm.GetClient(config.DBFile, config.Debug)
-	go StartHTTPServer(db, config.HTTP)
+	go StartHTTPServer(db, config.HTTP, config.Debug)
 	StartTCPServer(db, config.GPRS)
 }
