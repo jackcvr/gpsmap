@@ -4,7 +4,6 @@ import (
 	"flag"
 	"github.com/jackcvr/gpsmap/orm"
 	"github.com/pelletier/go-toml/v2"
-	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"time"
@@ -76,11 +75,7 @@ func main() {
 		time.Local = loc
 	}
 
-	db := orm.GetClient(config.DBFile)
-	if config.Debug {
-		db.Logger = logger.Default.LogMode(logger.Info)
-	}
-
+	db := orm.GetClient(config.DBFile, config.Debug)
 	go StartHTTPServer(db, config.HTTP)
 	StartTCPServer(db, config.GPRS)
 }

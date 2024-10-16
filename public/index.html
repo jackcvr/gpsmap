@@ -4,6 +4,7 @@
     <title>GPS tracking map</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
         table {
@@ -136,7 +137,7 @@
             const _records = await res.json()
 
             let centered = false
-            _records.forEach(record => {
+            _records.forEach((record, i) => {
                 if ($imei.find(`option[value="${record.imei}"]`).length === 0) {
                     $imei.append(`<option value="${record.imei}">${record.imei}</option>`)
                 }
@@ -151,6 +152,9 @@
                 marker.on("popupopen", () => {
                     marker.setOpacity(1)
                     $records.val(marker._recordId)
+                    setTimeout(() => {
+                        $records.scrollTop(i * 17)
+                    }, 0)
                     URLParams.delete("record")
                     URLParams.append("record", marker._recordId)
                     window.location.hash = URLParams.toString()
@@ -282,7 +286,10 @@
                 const m = markers[i]
                 if (m._recordId === selected[selected.length-1]) {
                     m.openPopup()
-                    map.setView(m.getLatLng())
+                    const coords = m.getLatLng()
+                    if (coords.lat !== 0 || coords.lng !== 0) {
+                        map.setView(coords)
+                    }
                     break
                 }
             }
