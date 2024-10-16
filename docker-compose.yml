@@ -7,7 +7,7 @@ services:
     volumes:
       - ./dist/gpsmap_linux_amd64_v1:/app
       - ./gpsmap.toml:/root/gpsmap.toml
-      - ./.data/db.sqlite3:/var/lib/gpsmap/db.sqlite3
+      - ./.data/sqlite:/var/lib/gpsmap
       - ./.data/server.crt:/root/server.crt
       - ./.data/server.key:/root/server.key
     network_mode: host
