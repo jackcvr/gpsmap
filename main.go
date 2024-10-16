@@ -10,10 +10,7 @@ import (
 	_ "time/tzdata"
 )
 
-const (
-	LogFlags   = log.LstdFlags | log.Lshortfile | log.Lmicroseconds
-	BufferSize = 1024
-)
+const LogFlags = log.LstdFlags | log.Lshortfile | log.Lmicroseconds
 
 var (
 	configPath = "/etc/gpsmap/gpsmap.toml"

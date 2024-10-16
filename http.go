@@ -49,22 +49,27 @@ func logRequest(h http.Handler) http.Handler {
 
 func StartHTTPServer(db *gorm.DB, config HTTPConfig, debug bool) {
 	if !debug {
+		const (
+			TextHTML = "text/html"
+			TextJS   = "text/js"
+			TextCSS  = "text/css"
+		)
 		m := minify.New()
-		m.Add("text/html", &html.Minifier{
+		m.Add(TextHTML, &html.Minifier{
 			KeepDocumentTags: true,
 			KeepEndTags:      true,
 			KeepQuotes:       true,
 		})
-		m.AddFunc("text/js", js.Minify)
-		m.AddFunc("text/css", css.Minify)
+		m.AddFunc(TextJS, js.Minify)
+		m.AddFunc(TextCSS, css.Minify)
 		var err error
-		if indexHTML, err = m.Bytes("text/html", indexHTML); err != nil {
+		if indexHTML, err = m.Bytes(TextHTML, indexHTML); err != nil {
 			panic(err)
 		}
-		if mainJS, err = m.Bytes("text/js", mainJS); err != nil {
+		if mainJS, err = m.Bytes(TextJS, mainJS); err != nil {
 			panic(err)
 		}
-		if mainCSS, err = m.Bytes("text/css", mainCSS); err != nil {
+		if mainCSS, err = m.Bytes(TextCSS, mainCSS); err != nil {
 			panic(err)
 		}
 	}

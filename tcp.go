@@ -9,6 +9,8 @@ import (
 	"net"
 )
 
+const BufferSize = 1024
+
 func StartTCPServer(db *gorm.DB, config GPRSConfig) {
 	var err error
 	var ln net.Listener
