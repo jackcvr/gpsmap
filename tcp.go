@@ -3,15 +3,17 @@ package main
 import (
 	"encoding/binary"
 	"github.com/jackcvr/gpsmap/orm"
+	"gorm.io/gorm"
 	"io"
 	"log"
 	"net"
 )
 
-func StartTCPServer(addr string) {
+func StartTCPServer(db *gorm.DB, config GPRSConfig) {
 	var err error
 	var ln net.Listener
-	ln, err = net.Listen("tcp", addr)
+	log.Printf("TCP listening on %s", config.Bind)
+	ln, err = net.Listen("tcp", config.Bind)
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +59,7 @@ func StartTCPServer(addr string) {
 						Payload: payload,
 					}
 					go func(r orm.Record) {
-						if err := orm.Client.Create(&r).Error; err != nil {
+						if err := db.Create(&r).Error; err != nil {
 							errLog.Print(err)
 						}
 					}(r)

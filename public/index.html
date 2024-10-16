@@ -281,8 +281,8 @@
             for (let i = 0; i < markers.length; i++) {
                 const m = markers[i]
                 if (m._recordId === selected[selected.length-1]) {
-                    map.setView(m.getLatLng())
                     m.openPopup()
+                    map.setView(m.getLatLng())
                     break
                 }
             }

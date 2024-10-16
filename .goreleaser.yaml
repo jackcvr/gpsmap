@@ -47,3 +47,19 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+nfpms:
+  - package_name: gpsmap
+    maintainer: Andrii Kuzmin <jack.cvr@gmail.com>
+    bindir: /usr/local/bin
+    formats:
+      - apk
+    contents:
+      - src: gpsmap.toml
+        dst: /etc/gpsmap/gpsmap.toml
+        type: config|noreplace
+        packager: apk
+      - src: openrc/gpsmap
+        dst: /etc/init.d/gpsmap
+        type: config|noreplace
+        packager: apk

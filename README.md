@@ -1,12 +1,12 @@
-# Server and map for Teltonika GPS trackers
+# GPS Server for Teltonika trackers
 
-## Tracker configuring
+## Tracker configuration
 
 Go to GPRS settings: https://wiki.teltonika-gps.com/view/FMC880_GPRS_settings
 
 - Server settings
-  - Domain = public domain/IP of your machine where you plan to run the server  
-  - Port = port to run server on (12050 by default)
+  - Domain = your server IP/Domain 
+  - Port = server port (12050 by default)
   - Protocol = TCP
 
 - Record settings

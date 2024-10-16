@@ -1,0 +1,13 @@
+dbfile = "/var/lib/gpsmap/db.sqlite3"
+tz = "Europe/Vilnius"
+debug = false
+
+[http]
+bind = "0.0.0.0:12000"
+certfile = "/root/server.crt"
+keyfile = "/root/server.key"
+username = "admin"
+password = "admin" # change it!
+
+[gprs]
+bind = "0.0.0.0:12050"

@@ -43,6 +43,27 @@ archives:
       - src: README*
       - src: changelog*
       - src: CHANGELOG*
+nfpms:
+  - file_name_template: '{{ .PackageName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
+    package_name: gpsmap
+    contents:
+      - src: gpsmap.toml
+        dst: /etc/gpsmap/gpsmap.toml
+        type: config|noreplace
+        packager: apk
+      - src: openrc/gpsmap
+        dst: /etc/init.d/gpsmap
+        type: config|noreplace
+        packager: apk
+    id: default
+    formats:
+      - apk
+    maintainer: Andrii Kuzmin <jack.cvr@gmail.com>
+    bindir: /usr/local/bin
+    libdirs:
+      header: /usr/include
+      carchive: /usr/lib
+      cshared: /usr/lib
 snapshot:
   version_template: '{{ .Version }}-SNAPSHOT-{{ .ShortCommit }}'
 checksum:

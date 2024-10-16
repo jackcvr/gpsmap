@@ -1,37 +1,21 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"github.com/goji/httpauth"
 	"github.com/jackcvr/gpsmap/orm"
 	_ "github.com/joho/godotenv/autoload"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 )
 
-const (
-	PublicDir  = "./public"
-	DateFormat = "2006-01-02"
-)
+const DateFormat = "2006-01-02"
 
-var (
-	AbsPublicDir string
-	CertFile     = os.Getenv("HTTP_CERT_FILE")
-	KeyFile      = os.Getenv("HTTP_KEY_FILE")
-	Username     = os.Getenv("HTTP_USERNAME")
-	Password     = os.Getenv("HTTP_PASSWORD")
-)
-
-func init() {
-	var err error
-	AbsPublicDir, err = filepath.Abs(PublicDir)
-	if err != nil {
-		panic(err)
-	}
-}
+//go:embed public/index.html
+var indexHTML []byte
 
 func asJSON(v any) []byte {
 	b, err := json.Marshal(v)
@@ -53,8 +37,8 @@ func logRequest(h http.Handler) http.Handler {
 	})
 }
 
-func StartHTTPServer(addr string) {
-	basicAuth := httpauth.SimpleBasicAuth(Username, Password)
+func StartHTTPServer(db *gorm.DB, config HTTPConfig) {
+	basicAuth := httpauth.SimpleBasicAuth(config.Username, config.Password)
 	Handler := func(h http.Handler) http.Handler {
 		return logRequest(basicAuth(h))
 	}
@@ -83,7 +67,7 @@ func StartHTTPServer(addr string) {
 		}
 
 		var recs []orm.Record
-		if err = orm.Client.Where("created_at >= ? AND created_at < ?", start, end).Find(&recs).Error; err != nil {
+		if err = db.Where("created_at >= ? AND created_at < ?", start, end).Find(&recs).Error; err != nil {
 			errLog.Print(err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -94,8 +78,12 @@ func StartHTTPServer(addr string) {
 		}
 	})))
 
-	http.Handle("GET /", Handler(http.FileServer(http.Dir(AbsPublicDir))))
+	http.Handle("GET /", Handler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if _, err := w.Write(indexHTML); err != nil {
+			errLog.Print(err)
+		}
+	})))
 
-	log.Printf("listening on %s", addr)
-	log.Fatal(http.ListenAndServeTLS(addr, CertFile, KeyFile, nil))
+	log.Printf("HTTP listening on %s", config.Bind)
+	log.Fatal(http.ListenAndServeTLS(config.Bind, config.CertFile, config.KeyFile, nil))
 }
