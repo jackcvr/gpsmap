@@ -4,6 +4,7 @@ go 1.23.0
 
 require (
 	github.com/glebarez/sqlite v1.11.0
+	github.com/goccy/go-json v0.10.3
 	github.com/goji/httpauth v0.0.0-20160601135302-2da839ab0f4d
 	github.com/joho/godotenv v1.5.1
 	github.com/pelletier/go-toml/v2 v2.2.3
