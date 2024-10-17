@@ -70,6 +70,9 @@
         })
         markers.splice(0, markers.length)
 
+        $records.empty()
+        $records.append("<option disabled>Loading...</option>")
+
         const res = await fetch(`/records?from=${date2str(from)}&to=${date2str(to)}`)
         const _records = await res.json()
 
