@@ -18,8 +18,8 @@ VACUUM;`
 
 var clients = map[string]*gorm.DB{}
 
-func GetClient(filename string, debug bool) *gorm.DB {
-	client, ok := clients[filename]
+func GetClient(dsn string, debug bool) *gorm.DB {
+	client, ok := clients[dsn]
 	if ok {
 		return client
 	}
@@ -28,18 +28,18 @@ func GetClient(filename string, debug bool) *gorm.DB {
 	if debug {
 		_logger = logger.Default.LogMode(logger.Info)
 	}
-	client, err = gorm.Open(sqlite.Open(filename), &gorm.Config{
+	client, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: _logger,
 	})
 	if err != nil {
 		panic(err)
 	}
+	if err = client.Exec(SQLiteTuning).Error; err != nil {
+		panic(err)
+	}
 	if err = client.AutoMigrate(
 		&Record{},
 	); err != nil {
-		panic(err)
-	}
-	if err = client.Exec(SQLiteTuning).Error; err != nil {
 		panic(err)
 	}
 	go func() {
@@ -49,9 +49,9 @@ func GetClient(filename string, debug bool) *gorm.DB {
 			if err = client.Exec("PRAGMA optimize;").Error; err != nil {
 				panic(err)
 			}
-			log.Printf("database %s optimized", filename)
+			log.Printf("database %s optimized", dsn)
 		}
 	}()
-	clients[filename] = client
+	clients[dsn] = client
 	return client
 }

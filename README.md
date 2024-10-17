@@ -11,3 +11,6 @@ Go to GPRS settings: https://wiki.teltonika-gps.com/view/FMC880_GPRS_settings
 
 - Record settings
   - ACK Type = TCP/IP
+
+## Useful links
+- https://wiki.teltonika-gps.com/view/FMC880_Teltonika_Data_Sending_Parameters_ID

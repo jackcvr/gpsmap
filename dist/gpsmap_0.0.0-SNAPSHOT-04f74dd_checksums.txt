@@ -1,2 +1,0 @@
-db54e1b1c202828ff9401a3fcf0f787901aa6f353843d95d80f242ee9b312a2f  gpsmap_0.0.0-SNAPSHOT-04f74dd_linux_amd64.apk
-2f783c984f379369fbe31b15b3350dfda4437f56dc4c8c40d901b7a0e3ea0a96  gpsmap_Linux_x86_64.tar.gz
