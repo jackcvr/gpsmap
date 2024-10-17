@@ -39,14 +39,6 @@ func toDayLocal(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 }
 
-func logRequest(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		h.ServeHTTP(w, r)
-		log.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.RequestURI, time.Since(start))
-	})
-}
-
 func StartHTTPServer(db *gorm.DB, config HTTPConfig, debug bool) {
 	if !debug {
 		const (
@@ -74,20 +66,12 @@ func StartHTTPServer(db *gorm.DB, config HTTPConfig, debug bool) {
 		}
 	}
 
-	basicAuth := httpauth.SimpleBasicAuth(config.Username, config.Password)
-	Handler := func(h http.Handler) http.Handler {
-		return logRequest(basicAuth(h))
-	}
-
-	http.Handle("GET /records", Handler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /records", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		from := req.FormValue("from")
 		to := req.FormValue("to")
 
 		var err error
-		now := time.Now()
-		start := toDayLocal(now)
-		end := start.Add(time.Hour * 24)
-
+		var start, end time.Time
 		if from != "" && to != "" {
 			if start, err = time.Parse(DateFormat, from); err == nil {
 				start = toDayLocal(start)
@@ -100,6 +84,9 @@ func StartHTTPServer(db *gorm.DB, config HTTPConfig, debug bool) {
 				http.Error(w, "Bad request", http.StatusBadRequest)
 				return
 			}
+		} else {
+			start = toDayLocal(time.Now())
+			end = start.Add(time.Hour * 24)
 		}
 
 		var recs []orm.Record
@@ -112,28 +99,36 @@ func StartHTTPServer(db *gorm.DB, config HTTPConfig, debug bool) {
 		if err != nil {
 			errLog.Print(err)
 		}
-	})))
+	}))
 
-	http.Handle("GET /main.js", Handler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /main.js", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "text/javascript")
 		if _, err := w.Write(mainJS); err != nil {
 			errLog.Print(err)
 		}
-	})))
+	}))
 
-	http.Handle("GET /main.css", Handler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /main.css", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "text/css")
 		if _, err := w.Write(mainCSS); err != nil {
 			errLog.Print(err)
 		}
-	})))
+	}))
 
-	http.Handle("GET /", Handler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if _, err := w.Write(indexHTML); err != nil {
 			errLog.Print(err)
 		}
-	})))
+	}))
+
+	basicAuth := httpauth.SimpleBasicAuth(config.Username, config.Password)
 
 	log.Printf("HTTP listening on %s", config.Bind)
-	log.Fatal(http.ListenAndServeTLS(config.Bind, config.CertFile, config.KeyFile, nil))
+	log.Fatal(http.ListenAndServeTLS(config.Bind, config.CertFile, config.KeyFile, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		defer func() {
+			log.Printf("%s %s %s %s", r.RemoteAddr, r.Method, r.RequestURI, time.Since(start))
+		}()
+		basicAuth(http.DefaultServeMux).ServeHTTP(w, r)
+	})))
 }
