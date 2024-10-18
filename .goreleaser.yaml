@@ -54,6 +54,7 @@ nfpms:
     bindir: /usr/local/bin
     formats:
       - apk
+      - deb
     contents:
       - src: gpsmap.toml
         dst: /etc/gpsmap/gpsmap.toml
@@ -68,6 +69,6 @@ nfpms:
         dst: /etc/gpsmap/gpsmap.toml
         type: config|noreplace
         packager: deb
-      - src: systemd/gpsmap
+      - src: systemd/gpsmap.service
         dst: /lib/systemd/system/gpsmap.service
         packager: deb
