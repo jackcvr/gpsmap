@@ -5,7 +5,6 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/goji/httpauth"
 	"github.com/jackcvr/gpsmap/orm"
-	_ "github.com/joho/godotenv/autoload"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/css"
 	"github.com/tdewolff/minify/v2/html"
