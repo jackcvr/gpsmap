@@ -5,7 +5,7 @@
 Go to System settings: https://wiki.teltonika-gps.com/view/FMC880_System_settings
 
 - Data protocol
-  - Codec JSON (other binary codecs are not supported so far. Request any if you need it)
+  - Codec JSON (other binary codecs are not supported yet)
 
 ![](./docs/Screenshot_codec_json.png)
 
@@ -23,7 +23,7 @@ Go to GPRS settings: https://wiki.teltonika-gps.com/view/FMC880_GPRS_settings
 
 ## Installation
 
-See [Releases](https://github.com/jackcvr/reverssh/releases)
+See [Releases](https://github.com/jackcvr/gpsmap/releases)
 
 ## Configuration
 
