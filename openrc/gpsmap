@@ -2,7 +2,7 @@
 
 supervisor=supervise-daemon
 
-description="GPS Server"
+description="GPS Map server"
 command="/usr/local/bin/gpsmap"
 command_args="-c /etc/gpsmap/gpsmap.toml"
 command_background=true

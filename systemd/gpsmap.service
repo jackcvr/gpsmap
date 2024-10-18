@@ -1,0 +1,10 @@
+[Unit]
+Description=GPS Map server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/gpsmap -c /etc/gpsmap/gpsmap.toml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -63,3 +63,11 @@ nfpms:
         dst: /etc/init.d/gpsmap
         type: config|noreplace
         packager: apk
+
+      - src: gpsmap.toml
+        dst: /etc/gpsmap/gpsmap.toml
+        type: config|noreplace
+        packager: deb
+      - src: systemd/gpsmap
+        dst: /lib/systemd/system/gpsmap.service
+        packager: deb
