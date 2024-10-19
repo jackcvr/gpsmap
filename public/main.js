@@ -245,6 +245,9 @@
         for (let i = 0; i < markers.length; i++) {
             const m = markers[i]
             if (m._recordId === selected[selected.length-1]) {
+                if (!map.hasLayer(m)) {
+                    m.addTo(map)
+                }
                 m.openPopup()
                 const coords = m.getLatLng()
                 if (coords.lat !== 0 || coords.lng !== 0) {
