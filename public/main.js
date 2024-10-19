@@ -26,7 +26,7 @@
         175: ["Auto Geofence", {0: "target left zone", 1: "target entered zone"}],
         252: ["Unplug", {0: "battery present", 1: "battery unplugged"}],
     }
-    const prettifyData = (data) => {
+    const prettifyData = data => {
         const pdata = { ...data }
         for (const [key, value] of Object.entries(pdata)) {
             if (key === "evt" && value in dataInfo) {
@@ -42,21 +42,21 @@
     }
     const map = L.map("map")
     const records = []
-    const markers = []
+    const markers = {}
     const $day = $("#day")
     const $from = $("#from")
     const $to = $("#to")
     const $imei = $("#imei")
     const $records = $("#records")
-    const MinOpacity = 0.1
+    const MinOpacity = 0.2
     const URLParams = new URLSearchParams(window.location.hash.slice(1))
 
-    const makeDate = (s) => {
+    const makeDate = s => {
         const d = s ? new Date(s) : new Date()
         d.setHours(0, 0, 0, 0)
         return d
     }
-    const date2str = (d) => {
+    const date2str = d => {
         const day = d.getDate().toString().padStart(2, "0")
         const month = (d.getMonth() + 1).toString().padStart(2, "0")
         const year = d.getFullYear()
@@ -65,66 +65,66 @@
 
     const updateRecords = async (from, to) => {
         $imei.empty()
-        markers.forEach(marker => {
-            marker.removeFrom(map)
-        })
-        markers.splice(0, markers.length)
-
-        $records.empty()
-        $records.append("<option disabled>Loading...</option>")
+        records.splice(0, records.length)
+        $records.html("<option disabled>Loading...</option>")
+        for (const m of Object.values(markers)) {
+            m.remove()
+        }
+        for (const latlng of Object.keys(markers)) {
+            delete markers[latlng]
+        }
 
         const res = await fetch(`/records?from=${date2str(from)}&to=${date2str(to)}`)
-        const _records = await res.json()
+        records.push(...await res.json())
+        $records.empty()
 
         let centered = false
-        _records.forEach((record, i) => {
+        records.forEach((record, i) => {
             if ($imei.find(`option[value="${record.imei}"]`).length === 0) {
                 $imei.append(`<option value="${record.imei}">${record.imei}</option>`)
             }
             record.created_at = new Date(record.created_at).toLocaleString()
             record.payload = JSON.parse(record.payload)
-            const coords = record.payload.state.reported.latlng.split(",")
-            const marker = L.marker(coords, {opacity: MinOpacity})
-            const jsonItems = JSON.stringify(prettifyData(record.payload.state.reported), null, 2)
-            marker.addTo(map).bindPopup(`<pre>${record.created_at}\n${jsonItems}</pre>`)
+            const data = record.payload.state.reported
+            const event = data.evt > 0 && data.evt in dataInfo ? ` ${dataInfo[data.evt][0]} ` : ""
+            $records.append(`<option value="${record.id}">${record.created_at} >${event}> ${data.latlng}</option>`)
+            if (data.latlng in markers) {
+                return
+            }
+            const marker = L.marker(data.latlng.split(","), {opacity: MinOpacity})
+            // const jsonItems = JSON.stringify(prettifyData(record.payload.state.reported), null, 2)
+            marker.addTo(map)  //.bindPopup(`<pre>${record.created_at}\n${jsonItems}</pre>`)
             marker._imei = record.imei
             marker._recordId = record.id.toString()
-            marker._isIdentical = false
-            if (_records[i-1] && record.payload.state.reported.latlng === _records[i-1].payload.state.reported.latlng) {
-                markers[i-1]._isIdentical = true
-                markers[i-1].removeFrom(map)
+            marker.openRecordPopup = r => {
+                marker.unbindPopup()
+                const jsonData = JSON.stringify(prettifyData(r.payload.state.reported), null, 2)
+                marker.bindPopup(`<pre>${r.created_at}\n${jsonData}</pre>`)
+                marker.openPopup()
             }
-            marker.on("click", e => {
-                setTimeout(() => {
+            marker.on("click", _ => {
+                marker.openRecordPopup(record)
+                $records.val(marker._recordId)
+                setTimeout(_ => {
                     $records.scrollTop(i * 17)
                 }, 0)
             })
-            marker.on("popupopen", e => {
+            marker.on("popupopen", _ => {
                 marker.setOpacity(1)
-                $records.val(marker._recordId)
                 URLParams.delete("record")
                 URLParams.append("record", marker._recordId)
                 window.location.hash = URLParams.toString()
             })
             marker.on("popupclose", () => {
                 marker.setOpacity(MinOpacity)
-                $records.val(null)
                 URLParams.delete("record")
                 window.location.hash = URLParams.toString()
             })
-            markers.push(marker)
+            markers[data.latlng] = marker
             if (!centered) {
-                map.setView(coords, 13)
+                map.setView(marker.getLatLng(), 14)
                 centered = true
             }
-        })
-        records.splice(0, records.length, ..._records)
-
-        $records.empty()
-        records.forEach(record => {
-            const data = record.payload.state.reported
-            const event = data.evt > 0 && data.evt in dataInfo ? ` ${dataInfo[data.evt][0]} ` : ""
-            $records.append(`<option value="${record.id}">${record.created_at} >${event}> ${data.latlng}</option>`)
         })
 
         const recordId = URLParams.get("record")
@@ -133,7 +133,7 @@
         }
     }
 
-    const [ playAnimation, cancelAnimation ] = (() => {
+    const [ playAnimation, cancelAnimation ] = (_ => {
         const timers = []
         let isCanceled = false
 
@@ -146,10 +146,10 @@
             isCanceled = false
         }
 
-        const play = () => {
+        const play = _ => {
             cancel()
             const speed = parseInt($("#speed").val())
-            markers.forEach((marker, i, markers) => {
+            Object.values(markers).forEach((marker, i, markers) => {
                 ((i) => {
                     if (isCanceled) {
                         return
@@ -180,7 +180,7 @@
         return [ play, cancel ]
     })()
 
-    $day.on("change", async e => {
+    $day.on("change", async _ => {
         const fromVal = $day.val()
         $from.val(fromVal)
         const to = new Date(fromVal)
@@ -188,7 +188,7 @@
         $to.val(date2str(to)).change()
     })
 
-    $from.add($to).on("change", async e => {
+    $from.add($to).on("change", async _ => {
         const from = $from.val()
         const to = $to.val()
         if (!from || !to) {
@@ -202,9 +202,9 @@
         window.location.hash = URLParams.toString()
     })
 
-    $imei.on("change", async e => {
+    $imei.on("change", async _ => {
         const selected = $imei.val()
-        markers.forEach(marker => {
+        Object.values(markers).forEach(marker => {
             if (selected.length > 0) {
                 marker.setOpacity(0)
                 if (selected.includes(marker._imei)) {
@@ -216,39 +216,32 @@
         })
     })
 
-    $("#play").click(e => {
+    $("#play").click(_ => {
         playAnimation()
     })
 
-    $("#cancelPlay").click(e => {
+    $("#cancelPlay").click(_ => {
         cancelAnimation()
     })
 
-    const $identical = $("#identical").on("change", e => {
-        markers.forEach(m => {
-            if (!m._isIdentical) {
-                return
-            }
-            if ($identical.is(':checked')) {
-                m.addTo(map)
-            } else {
-                m.removeFrom(map)
-            }
-        })
-    })
-
-    $records.on("change", () => {
+    $records.on("change", _ => {
         const selected = $records.val()
         if (selected.length === 0) {
             return
         }
-        for (let i = 0; i < markers.length; i++) {
-            const m = markers[i]
-            if (m._recordId === selected[selected.length-1]) {
-                if (!map.hasLayer(m)) {
-                    m.addTo(map)
-                }
-                m.openPopup()
+        let record
+        for (const r of records) {
+            if (r.id.toString() === selected[selected.length-1]) {
+                record = r
+                break
+            }
+        }
+        if (!record) {
+            throw new Error("WTF!? record not found!")
+        }
+        for (const [latlng, m] of Object.entries(markers)) {
+            if (latlng === record.payload.state.reported.latlng) {
+                m.openRecordPopup(record)
                 const coords = m.getLatLng()
                 if (coords.lat !== 0 || coords.lng !== 0) {
                     map.setView(coords)
