@@ -89,12 +89,19 @@
             marker.addTo(map).bindPopup(`<pre>${record.created_at}\n${jsonItems}</pre>`)
             marker._imei = record.imei
             marker._recordId = record.id.toString()
-            marker.on("popupopen", () => {
-                marker.setOpacity(1)
-                $records.val(marker._recordId)
+            marker._isIdentical = false
+            if (_records[i-1] && record.payload.state.reported.latlng === _records[i-1].payload.state.reported.latlng) {
+                markers[i-1]._isIdentical = true
+                markers[i-1].removeFrom(map)
+            }
+            marker.on("click", e => {
                 setTimeout(() => {
                     $records.scrollTop(i * 17)
                 }, 0)
+            })
+            marker.on("popupopen", e => {
+                marker.setOpacity(1)
+                $records.val(marker._recordId)
                 URLParams.delete("record")
                 URLParams.append("record", marker._recordId)
                 window.location.hash = URLParams.toString()
@@ -215,6 +222,19 @@
 
     $("#cancelPlay").click(e => {
         cancelAnimation()
+    })
+
+    const $identical = $("#identical").on("change", e => {
+        markers.forEach(m => {
+            if (!m._isIdentical) {
+                return
+            }
+            if ($identical.is(':checked')) {
+                m.addTo(map)
+            } else {
+                m.removeFrom(map)
+            }
+        })
     })
 
     $records.on("change", () => {
