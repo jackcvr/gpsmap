@@ -44,6 +44,10 @@ password = "admin" # change it!
 
 [gprs]
 bind = "0.0.0.0:12050"  # endpoint of TCP server for receiving GPRS data from tracker
+
+[tgbot]
+token = ""  # set bot's token to receive notifications from Telegram bot
+timeout = 3730  # in seconds
 ```
 
 After all preparation is done, restart `gpsmap` service and 
