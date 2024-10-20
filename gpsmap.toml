@@ -14,3 +14,4 @@ bind = "0.0.0.0:12050"
 
 [tgbot]
 token = ""
+timeout = 3730

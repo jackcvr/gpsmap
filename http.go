@@ -38,7 +38,7 @@ func toDayLocal(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 }
 
-func StartHTTPServer(db *gorm.DB, config HTTPConfig, debug bool) {
+func ServeHTTP(config HTTPConfig, db *gorm.DB, debug bool) {
 	if !debug {
 		const (
 			TextHTML = "text/html"

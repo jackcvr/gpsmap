@@ -2,24 +2,57 @@ package main
 
 import (
 	"encoding/binary"
+	"github.com/goccy/go-json"
 	"github.com/jackcvr/gpsmap/orm"
 	"gorm.io/gorm"
 	"io"
 	"log"
 	"net"
+	"time"
 )
 
-const BufferSize = 1024
+const (
+	BufferSize     = 1024
+	AutoGeofenceID = 175
+)
 
-func StartTCPServer(db *gorm.DB, config GPRSConfig) {
+type Payload struct {
+	State struct {
+		Reported struct {
+			Evt int `json:"evt"`
+		} `json:"reported"`
+	} `json:"state"`
+}
+
+func ServeTCP(config Config, db *gorm.DB, bot *TGBot) {
 	var err error
 	var ln net.Listener
-	log.Printf("TCP listening on %s", config.Bind)
-	ln, err = net.Listen("tcp", config.Bind)
+	log.Printf("TCP listening on %s", config.GPRS.Bind)
+	ln, err = net.Listen("tcp", config.GPRS.Bind)
 	if err != nil {
 		panic(err)
 	}
 	defer ln.Close()
+
+	var timer *time.Timer
+	var recvTimeout time.Duration
+	if bot != nil && config.TGBot.Timeout > 0 {
+		recvTimeout = time.Second * time.Duration(config.TGBot.Timeout)
+		timer = time.NewTimer(recvTimeout)
+		defer timer.Stop()
+		go func() {
+			for {
+				<-timer.C
+				timer.Reset(recvTimeout)
+				if err = bot.NotifyUsers("Backend have not received a message in time! Check your car!"); err != nil {
+					errLog.Print(err)
+				} else {
+					log.Printf("timeout occured: users were notified")
+				}
+			}
+		}()
+		log.Printf("monitor started with timeout: %s", recvTimeout)
+	}
 
 	var conn net.Conn
 	for {
@@ -65,6 +98,19 @@ func StartTCPServer(db *gorm.DB, config GPRSConfig) {
 							errLog.Print(err)
 						}
 					}(r)
+					if timer != nil {
+						timer.Reset(recvTimeout)
+						go func() {
+							var p Payload
+							if err = json.Unmarshal([]byte(payload), &p); err != nil {
+								errLog.Print(err)
+							} else if p.State.Reported.Evt == AutoGeofenceID {
+								if err = bot.NotifyUsers("AutoGeofence triggered"); err != nil {
+									errLog.Print(err)
+								}
+							}
+						}()
+					}
 				}
 			}
 		}(conn)

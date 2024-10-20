@@ -39,6 +39,7 @@ func GetClient(dsn string, debug bool) *gorm.DB {
 	}
 	if err = client.AutoMigrate(
 		&Record{},
+		&TGChat{},
 	); err != nil {
 		panic(err)
 	}

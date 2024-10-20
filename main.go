@@ -30,7 +30,8 @@ type GPRSConfig struct {
 }
 
 type TGBotConfig struct {
-	Token string
+	Token   string
+	Timeout int
 }
 
 type Config struct {
@@ -55,6 +56,10 @@ var config = Config{
 	GPRS: GPRSConfig{
 		Bind: "0.0.0.0:12050",
 	},
+	TGBot: TGBotConfig{
+		Token:   "",
+		Timeout: 0,
+	},
 }
 
 func init() {
@@ -78,7 +83,10 @@ func main() {
 	}
 
 	db := orm.GetClient(config.DBFile, config.Debug)
-	go StartHTTPServer(db, config.HTTP, config.Debug)
-	go StartTGBot(db, config.TGBot)
-	StartTCPServer(db, config.GPRS)
+	go ServeHTTP(config.HTTP, db, config.Debug)
+	var bot *TGBot
+	if config.TGBot.Token != "" {
+		bot = StartTGBot(config.TGBot, db, config.Debug)
+	}
+	ServeTCP(config, db, bot)
 }
