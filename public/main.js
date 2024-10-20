@@ -156,33 +156,32 @@
             isCanceled = false
         }
 
-        const play = _ => {
+        const play = async _ => {
             cancelAll()
             const speed = parseInt($("#speed").val())
-            Object.values(markers).forEach(async (marker, i, markers) => {
+            const _markers = Object.values(markers)
+            for (const [i, marker] of Object.entries(_markers)) {
                 await (async (i) => {
                     if (isCanceled) {
                         return
                     }
-                    marker.setOpacity(MinOpacity)
-                    const [p, cancel] = sleep(i * speed)
+                    const [p, cancel] = sleep(speed)
                     cancels.push(cancel)
                     await p
                     marker.setOpacity(1.0)
-                    markers[i-1] && markers[i-1].setOpacity(0.75)
-                    markers[i-2] && markers[i-2].setOpacity(0.5)
-                    markers[i-3] && markers[i-3].setOpacity(0.25)
-                    markers[i-4] && markers[i-4].setOpacity(MinOpacity)
+                    _markers[i-1] && _markers[i-1].setOpacity(0.75)
+                    _markers[i-2] && _markers[i-2].setOpacity(0.5)
+                    _markers[i-3] && _markers[i-3].setOpacity(0.25)
+                    _markers[i-4] && _markers[i-4].setOpacity(MinOpacity)
                     map.setView(marker.getLatLng())
                     $records.val(marker._recordId)
                     setTimeout(() => {
+                        const i = $(`option[value="${marker._recordId}"]`, $records).index()
                         $records.scrollTop(i * 17)
                     }, 0)
-                    if (marker === markers[-1]) {
-                        cancels.splice(0, cancels.length)
-                    }
                 })(i)
-            })
+            }
+            cancels.splice(0, cancels.length)
         }
 
         return [ play, cancelAll ]
@@ -224,8 +223,8 @@
         })
     })
 
-    $("#play").click(_ => {
-        playAnimation()
+    $("#play").click(async _ => {
+        await playAnimation()
     })
 
     $("#cancelPlay").click(_ => {

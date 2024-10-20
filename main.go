@@ -29,12 +29,17 @@ type GPRSConfig struct {
 	Bind string
 }
 
+type TGBotConfig struct {
+	Token string
+}
+
 type Config struct {
 	DBFile string
 	TZ     string
 	Debug  bool
 	HTTP   HTTPConfig
 	GPRS   GPRSConfig
+	TGBot  TGBotConfig
 }
 
 var config = Config{
@@ -74,5 +79,6 @@ func main() {
 
 	db := orm.GetClient(config.DBFile, config.Debug)
 	go StartHTTPServer(db, config.HTTP, config.Debug)
+	go StartTGBot(db, config.TGBot)
 	StartTCPServer(db, config.GPRS)
 }
