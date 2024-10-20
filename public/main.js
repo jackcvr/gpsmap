@@ -51,6 +51,17 @@
     const MinOpacity = 0.2
     const URLParams = new URLSearchParams(window.location.hash.slice(1))
 
+    const sleep = ms => {
+        let t
+        const cancel = _ => {
+            clearTimeout(t)
+        }
+        const p = new Promise(resolve => {
+            t = setTimeout(resolve, ms)
+        })
+        return [ p, cancel ]
+    }
+
     const makeDate = s => {
         const d = s ? new Date(s) : new Date()
         d.setHours(0, 0, 0, 0)
@@ -92,8 +103,7 @@
                 return
             }
             const marker = L.marker(data.latlng.split(","), {opacity: MinOpacity})
-            // const jsonItems = JSON.stringify(prettifyData(record.payload.state.reported), null, 2)
-            marker.addTo(map)  //.bindPopup(`<pre>${record.created_at}\n${jsonItems}</pre>`)
+            marker.addTo(map)
             marker._imei = record.imei
             marker._recordId = record.id.toString()
             marker.openRecordPopup = r => {
@@ -101,6 +111,9 @@
                 const jsonData = JSON.stringify(prettifyData(r.payload.state.reported), null, 2)
                 marker.bindPopup(`<pre>${r.created_at}\n${jsonData}</pre>`)
                 marker.openPopup()
+                URLParams.delete("record")
+                URLParams.append("record", r.id)
+                window.location.hash = URLParams.toString()
             }
             marker.on("click", _ => {
                 marker.openRecordPopup(record)
@@ -111,9 +124,6 @@
             })
             marker.on("popupopen", _ => {
                 marker.setOpacity(1)
-                URLParams.delete("record")
-                URLParams.append("record", marker._recordId)
-                window.location.hash = URLParams.toString()
             })
             marker.on("popupclose", () => {
                 marker.setOpacity(MinOpacity)
@@ -134,50 +144,48 @@
     }
 
     const [ playAnimation, cancelAnimation ] = (_ => {
-        const timers = []
+        const cancels = []
         let isCanceled = false
 
-        const cancel = () => {
+        const cancelAll = () => {
             isCanceled = true
-            timers.forEach(t => {
-                clearTimeout(t)
+            cancels.forEach(cancel => {
+                cancel()
             })
-            timers.splice(0, timers.length)
+            cancels.splice(0, cancels.length)
             isCanceled = false
         }
 
         const play = _ => {
-            cancel()
+            cancelAll()
             const speed = parseInt($("#speed").val())
-            Object.values(markers).forEach((marker, i, markers) => {
-                ((i) => {
+            Object.values(markers).forEach(async (marker, i, markers) => {
+                await (async (i) => {
                     if (isCanceled) {
                         return
                     }
                     marker.setOpacity(MinOpacity)
-                    timers.push(setTimeout(() => {
-                        if (isCanceled) {
-                            return
-                        }
-                        marker.setOpacity(1.0)
-                        markers[i-1] && markers[i-1].setOpacity(0.75)
-                        markers[i-2] && markers[i-2].setOpacity(0.5)
-                        markers[i-3] && markers[i-3].setOpacity(0.25)
-                        markers[i-4] && markers[i-4].setOpacity(MinOpacity)
-                        map.setView(marker.getLatLng())
-                        $records.val(marker._recordId)
-                        setTimeout(() => {
-                            $records.scrollTop(i * 17)
-                        }, 0)
-                        if (marker === markers[-1]) {
-                            timers.splice(0, timers.length)
-                        }
-                    }, 500 + i * speed))
+                    const [p, cancel] = sleep(i * speed)
+                    cancels.push(cancel)
+                    await p
+                    marker.setOpacity(1.0)
+                    markers[i-1] && markers[i-1].setOpacity(0.75)
+                    markers[i-2] && markers[i-2].setOpacity(0.5)
+                    markers[i-3] && markers[i-3].setOpacity(0.25)
+                    markers[i-4] && markers[i-4].setOpacity(MinOpacity)
+                    map.setView(marker.getLatLng())
+                    $records.val(marker._recordId)
+                    setTimeout(() => {
+                        $records.scrollTop(i * 17)
+                    }, 0)
+                    if (marker === markers[-1]) {
+                        cancels.splice(0, cancels.length)
+                    }
                 })(i)
             })
         }
 
-        return [ play, cancel ]
+        return [ play, cancelAll ]
     })()
 
     $day.on("change", async _ => {
