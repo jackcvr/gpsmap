@@ -86,7 +86,8 @@
         }
 
         const res = await fetch(`/records?from=${date2str(from)}&to=${date2str(to)}`)
-        records.push(...await res.json())
+        const items = await res.json()
+        records.push(...items.reverse())
         $records.empty()
 
         let centered = false
@@ -159,7 +160,7 @@
         const play = async _ => {
             cancelAll()
             const speed = parseInt($("#speed").val())
-            const _markers = Object.values(markers)
+            const _markers = Object.values(markers).reverse()
             for (const [i, marker] of Object.entries(_markers)) {
                 await (async (i) => {
                     if (isCanceled) {
