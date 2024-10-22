@@ -133,7 +133,7 @@
             })
             markers[data.latlng] = marker
             if (!centered) {
-                map.setView(marker.getLatLng(), 14)
+                map.setView(marker.getLatLng(), localStorage.getItem("zoom") || 14)
                 centered = true
             }
         })
@@ -187,6 +187,10 @@
 
         return [ play, cancelAll ]
     })()
+
+    map.on("zoomend", _ => {
+        localStorage.setItem("zoom", map.getZoom())
+    })
 
     $day.on("change", async _ => {
         const fromVal = $day.val()
