@@ -284,8 +284,7 @@
         if (text === "ping") {
             return
         }
-        const record = JSON.parse(text)
-        addRecord(record)
+        addRecord(JSON.parse(text))
     })
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
