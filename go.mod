@@ -9,6 +9,7 @@ require (
 	github.com/mymmrac/telego v0.31.3
 	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/tdewolff/minify/v2 v2.21.0
+	golang.org/x/net v0.26.0
 	gorm.io/gorm v1.25.12
 )
 

@@ -11,10 +11,7 @@ import (
 	"time"
 )
 
-const (
-	BufferSize     = 1024
-	AutoGeofenceID = 175
-)
+const BufferSize = 1024
 
 type Payload struct {
 	State struct {
@@ -24,7 +21,21 @@ type Payload struct {
 	} `json:"state"`
 }
 
-func ServeTCP(config Config, db *gorm.DB, bot *TGBot) {
+type Values = map[int]string
+
+type EvtInfo struct {
+	Name   string
+	Values Values
+}
+
+var EvtMap = map[int]EvtInfo{
+	239: {"Ignition", Values{0: "Off", 1: "On"}},
+	240: {"Movement", Values{0: "Off", 1: "On"}},
+	175: {"Auto Geofence", Values{0: "target left zone", 1: "target entered zone"}},
+	252: {"Unplug", Values{0: "battery present", 1: "battery unplugged"}},
+}
+
+func ServeTCP(config Config, db *gorm.DB, pubsub *PubSub, bot *TGBot) {
 	var err error
 	var ln net.Listener
 	log.Printf("TCP listening on %s", config.GPRS.Bind)
@@ -97,6 +108,7 @@ func ServeTCP(config Config, db *gorm.DB, bot *TGBot) {
 						if err := db.Create(&r).Error; err != nil {
 							errLog.Print(err)
 						}
+						pubsub.Publish(r)
 					}(r)
 					if timer != nil {
 						timer.Reset(recvTimeout)
@@ -104,8 +116,8 @@ func ServeTCP(config Config, db *gorm.DB, bot *TGBot) {
 							var p Payload
 							if err = json.Unmarshal([]byte(payload), &p); err != nil {
 								errLog.Print(err)
-							} else if p.State.Reported.Evt == AutoGeofenceID {
-								if err = bot.NotifyUsers("AutoGeofence triggered"); err != nil {
+							} else if evt, ok := EvtMap[p.State.Reported.Evt]; ok {
+								if err = bot.NotifyUsers(evt.Name); err != nil {
 									errLog.Print(err)
 								}
 							}

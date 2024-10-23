@@ -9,6 +9,7 @@ import (
 	"github.com/tdewolff/minify/v2/css"
 	"github.com/tdewolff/minify/v2/html"
 	"github.com/tdewolff/minify/v2/js"
+	"golang.org/x/net/websocket"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
@@ -38,7 +39,7 @@ func toDayLocal(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 }
 
-func ServeHTTP(config HTTPConfig, db *gorm.DB, debug bool) {
+func ServeHTTP(config HTTPConfig, db *gorm.DB, pubsub *PubSub, debug bool) {
 	if !debug {
 		const (
 			TextHTML = "text/html"
@@ -97,6 +98,28 @@ func ServeHTTP(config HTTPConfig, db *gorm.DB, debug bool) {
 		_, err = w.Write(asJSON(recs))
 		if err != nil {
 			errLog.Print(err)
+		}
+	}))
+
+	http.Handle("GET /ws", websocket.Handler(func(ws *websocket.Conn) {
+		sub := pubsub.Subscribe(ws)
+		defer func() {
+			pubsub.Unsubscribe(ws)
+		}()
+		t := time.Tick(time.Second)
+		for {
+			select {
+			case <-t:
+				if err := websocket.Message.Send(ws, []byte("ping")); err != nil {
+					errLog.Print(err)
+					return
+				}
+			case r := <-sub:
+				if err := websocket.Message.Send(ws, asJSON(r)); err != nil {
+					errLog.Print(err)
+					return
+				}
+			}
 		}
 	}))
 

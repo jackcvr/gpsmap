@@ -74,6 +74,51 @@
         return `${year}-${month}-${day}`
     }
 
+    const addRecord = record => {
+        records.push(record)
+        if ($imei.find(`option[value="${record.imei}"]`).length === 0) {
+            $imei.append(`<option value="${record.imei}">${record.imei}</option>`)
+        }
+        record.created_at = new Date(record.created_at).toLocaleString()
+        record.payload = JSON.parse(record.payload)
+        const data = record.payload.state.reported
+        const event = data.evt > 0 && data.evt in dataInfo ? ` ${dataInfo[data.evt][0]} ` : ""
+        $records.prepend(`<option value="${record.id}">${record.created_at} >${event}> ${data.latlng}</option>`)
+        if (data.latlng in markers) {
+            return
+        }
+        const marker = L.marker(data.latlng.split(","), {opacity: MinOpacity})
+        marker.addTo(map)
+        marker._imei = record.imei
+        marker._recordId = record.id.toString()
+        marker.openRecordPopup = r => {
+            marker.unbindPopup()
+            const jsonData = JSON.stringify(prettifyData(r.payload.state.reported), null, 2)
+            marker.bindPopup(`<pre>${r.created_at}\n${jsonData}</pre>`)
+            marker.openPopup()
+            URLParams.delete("record")
+            URLParams.append("record", r.id)
+            window.location.hash = URLParams.toString()
+        }
+        marker.on("click", _ => {
+            marker.openRecordPopup(record)
+            $records.val(marker._recordId)
+            setTimeout(_ => {
+                const i = $(`option[value="${marker._recordId}"]`, $records).index()
+                $records.scrollTop(i * 17)
+            }, 0)
+        })
+        marker.on("popupopen", _ => {
+            marker.setOpacity(1)
+        })
+        marker.on("popupclose", () => {
+            marker.setOpacity(MinOpacity)
+            URLParams.delete("record")
+            window.location.hash = URLParams.toString()
+        })
+        markers[data.latlng] = marker
+    }
+
     const updateRecords = async (from, to) => {
         $imei.empty()
         records.splice(0, records.length)
@@ -87,56 +132,16 @@
 
         const res = await fetch(`/records?from=${date2str(from)}&to=${date2str(to)}`)
         const items = await res.json()
-        records.push(...items.reverse())
         $records.empty()
 
-        let centered = false
-        records.forEach((record, i) => {
-            if ($imei.find(`option[value="${record.imei}"]`).length === 0) {
-                $imei.append(`<option value="${record.imei}">${record.imei}</option>`)
-            }
-            record.created_at = new Date(record.created_at).toLocaleString()
-            record.payload = JSON.parse(record.payload)
-            const data = record.payload.state.reported
-            const event = data.evt > 0 && data.evt in dataInfo ? ` ${dataInfo[data.evt][0]} ` : ""
-            $records.append(`<option value="${record.id}">${record.created_at} >${event}> ${data.latlng}</option>`)
-            if (data.latlng in markers) {
-                return
-            }
-            const marker = L.marker(data.latlng.split(","), {opacity: MinOpacity})
-            marker.addTo(map)
-            marker._imei = record.imei
-            marker._recordId = record.id.toString()
-            marker.openRecordPopup = r => {
-                marker.unbindPopup()
-                const jsonData = JSON.stringify(prettifyData(r.payload.state.reported), null, 2)
-                marker.bindPopup(`<pre>${r.created_at}\n${jsonData}</pre>`)
-                marker.openPopup()
-                URLParams.delete("record")
-                URLParams.append("record", r.id)
-                window.location.hash = URLParams.toString()
-            }
-            marker.on("click", _ => {
-                marker.openRecordPopup(record)
-                $records.val(marker._recordId)
-                setTimeout(_ => {
-                    $records.scrollTop(i * 17)
-                }, 0)
-            })
-            marker.on("popupopen", _ => {
-                marker.setOpacity(1)
-            })
-            marker.on("popupclose", () => {
-                marker.setOpacity(MinOpacity)
-                URLParams.delete("record")
-                window.location.hash = URLParams.toString()
-            })
-            markers[data.latlng] = marker
-            if (!centered) {
-                map.setView(marker.getLatLng(), localStorage.getItem("zoom") || 14)
-                centered = true
-            }
+        items.forEach((record, i) => {
+            addRecord(record)
         })
+
+        const markersList = Object.values(markers)
+        if (markersList.length > 0) {
+            map.setView(markersList[markersList.length - 1].getLatLng(), localStorage.getItem("zoom") || 14)
+        }
 
         const recordId = URLParams.get("record")
         if (recordId) {
@@ -160,7 +165,7 @@
         const play = async _ => {
             cancelAll()
             const speed = parseInt($("#speed").val())
-            const _markers = Object.values(markers).reverse()
+            const _markers = Object.values(markers)
             for (const [i, marker] of Object.entries(_markers)) {
                 await (async (i) => {
                     if (isCanceled) {
@@ -261,6 +266,26 @@
                 break
             }
         }
+    })
+
+    let ws
+    const wsConnect = _ => {
+        ws = new WebSocket(`wss://${window.location.host}/ws`)
+    }
+    wsConnect()
+
+    ws.addEventListener("close", async _ => {
+        await sleep(2000)[0]
+        wsConnect()
+    })
+
+    ws.addEventListener("message", async e => {
+        const text = await e.data.text()
+        if (text === "ping") {
+            return
+        }
+        const record = JSON.parse(text)
+        addRecord(record)
     })
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {

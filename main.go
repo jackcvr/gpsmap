@@ -83,10 +83,11 @@ func main() {
 	}
 
 	db := orm.GetClient(config.DBFile, config.Debug)
-	go ServeHTTP(config.HTTP, db, config.Debug)
+	pubsub := NewPubSub()
+	go ServeHTTP(config.HTTP, db, pubsub, config.Debug)
 	var bot *TGBot
 	if config.TGBot.Token != "" {
 		bot = StartTGBot(config.TGBot, db, config.Debug)
 	}
-	ServeTCP(config, db, bot)
+	ServeTCP(config, db, pubsub, bot)
 }
