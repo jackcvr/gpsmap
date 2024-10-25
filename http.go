@@ -66,9 +66,9 @@ func ServeHTTP(config HTTPConfig, db *gorm.DB, pubsub *PubSub, debug bool) {
 		}
 	}
 
-	http.Handle("GET /records", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		from := req.FormValue("from")
-		to := req.FormValue("to")
+	http.Handle("GET /records", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		from := r.FormValue("from")
+		to := r.FormValue("to")
 
 		var err error
 		var start, end time.Time
@@ -123,21 +123,21 @@ func ServeHTTP(config HTTPConfig, db *gorm.DB, pubsub *PubSub, debug bool) {
 		}
 	}))
 
-	http.Handle("GET /main.js", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /main.js", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/javascript")
 		if _, err := w.Write(mainJS); err != nil {
 			errLog.Print(err)
 		}
 	}))
 
-	http.Handle("GET /main.css", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /main.css", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/css")
 		if _, err := w.Write(mainCSS); err != nil {
 			errLog.Print(err)
 		}
 	}))
 
-	http.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("GET /{$}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write(indexHTML); err != nil {
 			errLog.Print(err)
 		}
