@@ -32,6 +32,7 @@ Adjust `/etc/gpsmap/gpsmap.toml` config to your needs
 Sample config:
 ```toml
 dbfile = "/var/lib/gpsmap/db.sqlite3"  # all the data will be stored here
+keepdays = 30  # keep records for the last 30 days only
 tz = "Europe/Vilnius"
 debug = false
 
