@@ -1,4 +1,5 @@
 dbfile = "/var/lib/gpsmap/db.sqlite3"
+keepdays = 30
 tz = "Europe/Vilnius"
 debug = false
 

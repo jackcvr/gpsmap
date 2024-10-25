@@ -17,6 +17,16 @@ var (
 	errLog     = log.New(os.Stderr, "", LogFlags)
 )
 
+type Config struct {
+	DBFile   string
+	KeepDays uint
+	TZ       string
+	Debug    bool
+	HTTP     HTTPConfig
+	GPRS     GPRSConfig
+	TGBot    TGBotConfig
+}
+
 type HTTPConfig struct {
 	Bind     string
 	CertFile string
@@ -34,18 +44,10 @@ type TGBotConfig struct {
 	Timeout int
 }
 
-type Config struct {
-	DBFile string
-	TZ     string
-	Debug  bool
-	HTTP   HTTPConfig
-	GPRS   GPRSConfig
-	TGBot  TGBotConfig
-}
-
 var config = Config{
-	DBFile: "/var/lib/gpsmap/db.sqlite3",
-	TZ:     "Europe/Vilnius",
+	DBFile:   "/var/lib/gpsmap/db.sqlite3",
+	KeepDays: 30,
+	TZ:       "Europe/Vilnius",
 	HTTP: HTTPConfig{
 		Bind:     "0.0.0.0:12000",
 		CertFile: "server.crt",
@@ -83,6 +85,16 @@ func main() {
 	}
 
 	db := orm.GetClient(config.DBFile, config.Debug)
+	go RunPeriodic(time.Hour, func() {
+		t := time.Now().Add(-time.Duration(config.KeepDays) * 24 * time.Hour)
+		if err := db.Where("created_at < ?", t).Delete(&orm.Record{}).Error; err != nil {
+			panic(err)
+		}
+		if err := db.Exec("PRAGMA optimize;").Error; err != nil {
+			panic(err)
+		}
+		log.Printf("database %s optimized", config.DBFile)
+	})
 	pubsub := NewPubSub()
 	go ServeHTTP(config.HTTP, db, pubsub, config.Debug)
 	var bot *TGBot

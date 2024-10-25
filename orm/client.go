@@ -4,8 +4,6 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"log"
-	"time"
 )
 
 const SQLiteTuning = `PRAGMA journal_mode = WAL;
@@ -43,16 +41,6 @@ func GetClient(dsn string, debug bool) *gorm.DB {
 	); err != nil {
 		panic(err)
 	}
-	go func() {
-		t := time.NewTicker(time.Hour)
-		for {
-			<-t.C
-			if err = client.Exec("PRAGMA optimize;").Error; err != nil {
-				panic(err)
-			}
-			log.Printf("database %s optimized", dsn)
-		}
-	}()
 	clients[dsn] = client
 	return client
 }

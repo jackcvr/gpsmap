@@ -4,6 +4,7 @@ import (
 	"github.com/jackcvr/gpsmap/orm"
 	"net"
 	"sync"
+	"time"
 )
 
 type PubSub struct {
@@ -38,5 +39,13 @@ func (ps *PubSub) Publish(r orm.Record) {
 	defer ps.mu.Unlock()
 	for _, sub := range ps.Subscribers {
 		sub <- r
+	}
+}
+
+func RunPeriodic(d time.Duration, f func()) {
+	t := time.NewTicker(d)
+	for {
+		<-t.C
+		f()
 	}
 }
