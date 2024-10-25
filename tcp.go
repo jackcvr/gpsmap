@@ -30,7 +30,6 @@ type EvtInfo struct {
 
 var EvtMap = map[int]EvtInfo{
 	239: {"Ignition", Values{0: "Off", 1: "On"}},
-	240: {"Movement", Values{0: "Off", 1: "On"}},
 	175: {"Auto Geofence", Values{0: "target left zone", 1: "target entered zone"}},
 	252: {"Unplug", Values{0: "battery present", 1: "battery unplugged"}},
 }
