@@ -106,11 +106,12 @@ func ServeHTTP(config HTTPConfig, db *gorm.DB, pubsub *PubSub, debug bool) {
 		defer func() {
 			pubsub.Unsubscribe(ws)
 		}()
-		t := time.Tick(time.Second)
+
+		t := time.Tick(2 * time.Second)
 		for {
 			select {
 			case <-t:
-				if err := websocket.Message.Send(ws, []byte("ping")); err != nil {
+				if err := websocket.Message.Send(ws, []byte("")); err != nil {
 					errLog.Print(err)
 					return
 				}

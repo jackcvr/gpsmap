@@ -281,7 +281,7 @@
 
     ws.addEventListener("message", async e => {
         const text = await e.data.text()
-        if (text === "ping") {
+        if (text === "") {
             return
         }
         addRecord(JSON.parse(text))
