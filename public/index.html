@@ -18,7 +18,7 @@
                 <fieldset>
                     <legend>Date</legend>
                     <div>
-                        <label for="from">Day</label>
+                        <label for="day">Day</label>
                         <input name="day" type="date" id="day" />
                     </div>
                     <hr />
@@ -30,17 +30,21 @@
                     </div>
                 </fieldset>
                 <fieldset>
-                    <legend>IMEI</legend>
-                    <select id="imei" multiple></select>
+                    <legend>Filter</legend>
+                    <label for="imei">IMEI</label>
+                    <select id="imei"></select>
                 </fieldset>
                 <fieldset>
-                    <legend>Speed (ms)</legend>
+                    <legend>Animation</legend>
+                    <label for="speed">Speed (ms)</label>
                     <input type="number" id="speed" value="50" />
                     <button id="play">Play</button>
                     <button id="cancelPlay">Cancel</button>
                 </fieldset>
                 <fieldset>
                     <legend>Records</legend>
+                    <label for="track">Track online</label>
+                    <input type="checkbox" id="track" checked />
                     <select id="records" multiple></select>
                 </fieldset>
             </td>

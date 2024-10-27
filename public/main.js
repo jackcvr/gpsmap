@@ -47,6 +47,7 @@
     const $from = $("#from")
     const $to = $("#to")
     const $imei = $("#imei")
+    const $track = $("#track")
     const $records = $("#records")
     const MinOpacity = 0.2
     const URLParams = new URLSearchParams(window.location.hash.slice(1))
@@ -284,7 +285,11 @@
         if (text === "") {
             return
         }
-        addRecord(JSON.parse(text))
+        const record = JSON.parse(text)
+        addRecord(record)
+        if ($track.is(":checked")) {
+            $records.val(record.id).change()
+        }
     })
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
