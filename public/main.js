@@ -75,6 +75,13 @@
         return `${year}-${month}-${day}`
     }
 
+    const scrollTo = id => {
+        setTimeout(() => {
+            const i = $(`option[value="${id}"]`, $records).index()
+            $records.scrollTop(i * 17)
+        }, 0)
+    }
+
     const addRecord = record => {
         records.push(record)
         if ($imei.find(`option[value="${record.imei}"]`).length === 0) {
@@ -104,10 +111,7 @@
         marker.on("click", _ => {
             marker.openRecordPopup(record)
             $records.val(marker._recordId)
-            setTimeout(_ => {
-                const i = $(`option[value="${marker._recordId}"]`, $records).index()
-                $records.scrollTop(i * 17)
-            }, 0)
+            scrollTo(marker._recordId)
         })
         marker.on("popupopen", _ => {
             marker.setOpacity(1)
@@ -182,10 +186,7 @@
                     _markers[i-4] && _markers[i-4].setOpacity(MinOpacity)
                     map.setView(marker.getLatLng())
                     $records.val(marker._recordId)
-                    setTimeout(() => {
-                        const i = $(`option[value="${marker._recordId}"]`, $records).index()
-                        $records.scrollTop(i * 17)
-                    }, 0)
+                    scrollTo(marker._recordId)
                 })(i)
             }
             cancels.splice(0, cancels.length)
@@ -289,6 +290,7 @@
         addRecord(record)
         if ($track.is(":checked")) {
             $records.val(record.id).change()
+            scrollTo(record.id)
         }
     })
 
