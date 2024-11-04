@@ -271,9 +271,6 @@
     })
 
     const es = new EventSource(`//${window.location.host}/events`)
-    // es.addEventListener("ping", e => {
-    //     console.log(e)
-    // })
     es.addEventListener("record", e => {
         const record = JSON.parse(e.data)
         addRecord(record)
