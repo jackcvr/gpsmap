@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/goji/httpauth"
 	"github.com/jackcvr/gpsmap/orm"
@@ -9,7 +10,6 @@ import (
 	"github.com/tdewolff/minify/v2/css"
 	"github.com/tdewolff/minify/v2/html"
 	"github.com/tdewolff/minify/v2/js"
-	"golang.org/x/net/websocket"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
@@ -101,26 +101,33 @@ func ServeHTTP(config HTTPConfig, db *gorm.DB, pubsub *PubSub, debug bool) {
 		}
 	}))
 
-	http.Handle("GET /ws", websocket.Handler(func(ws *websocket.Conn) {
-		sub := pubsub.Subscribe(ws)
+	http.Handle("GET /events", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sub := pubsub.Subscribe(w)
 		defer func() {
-			pubsub.Unsubscribe(ws)
+			pubsub.Unsubscribe(w)
 		}()
 
-		t := time.Tick(2 * time.Second)
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		const msgFormat = "event: record\nretry: 2000\ndata: %s\n\n"
+
+		ticker := time.NewTicker(5 * time.Second)
 		for {
 			select {
-			case <-t:
-				if err := websocket.Message.Send(ws, []byte("")); err != nil {
+			case <-ticker.C:
+				if _, err := fmt.Fprint(w, "\n"); err != nil {
 					errLog.Print(err)
 					return
 				}
-			case r := <-sub:
-				if err := websocket.Message.Send(ws, asJSON(r)); err != nil {
+			case record := <-sub:
+				if _, err := fmt.Fprintf(w, msgFormat, asJSON(record)); err != nil {
 					errLog.Print(err)
 					return
 				}
 			}
+			w.(http.Flusher).Flush()
 		}
 	}))
 

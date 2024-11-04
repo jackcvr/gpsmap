@@ -270,27 +270,18 @@
         }
     })
 
-    let ws
-    const wsConnect = _ => {
-        ws = new WebSocket(`wss://${window.location.host}/ws`)
-        ws.addEventListener("close", async _ => {
-            await sleep(2000)[0]
-            wsConnect()
-        })
-        ws.addEventListener("message", async e => {
-            const text = await e.data.text()
-            if (text === "") {
-                return
-            }
-            const record = JSON.parse(text)
-            addRecord(record)
-            if ($track.is(":checked")) {
-                $records.val(record.id).change()
-                scrollTo(record.id)
-            }
-        })
-    }
-    wsConnect()
+    const es = new EventSource(`//${window.location.host}/events`)
+    // es.addEventListener("ping", e => {
+    //     console.log(e)
+    // })
+    es.addEventListener("record", e => {
+        const record = JSON.parse(e.data)
+        addRecord(record)
+        if ($track.is(":checked")) {
+            $records.val(record.id).change()
+            scrollTo(record.id)
+        }
+    })
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         minZoom: 3,
